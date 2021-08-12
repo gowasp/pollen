@@ -3,6 +3,7 @@ package pollen
 import (
 	"bytes"
 	"context"
+	"errors"
 	"net"
 	"sync"
 	"time"
@@ -60,6 +61,22 @@ func (p *Pollen) Subscribe(topic string, f pkg.SubFunc) {
 	p.subscribe.Subscribe(topic, f)
 }
 
+var (
+	ErrConnNotReady = errors.New("connection not ready")
+)
+
+func (p *Pollen) Publish(seq int, topic string, body []byte) error {
+	p.rwmutex.RLock()
+	defer p.rwmutex.RUnlock()
+	if p.conn == nil {
+		return ErrConnNotReady
+	}
+	if _, err := p.conn.Write(pact.PubEncode(seq, topic, body)); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *Pollen) SubmitSubscribe() {
 	strs := p.subscribe.GetTopics()
 	if len(strs) == 0 {
@@ -67,7 +84,8 @@ func (p *Pollen) SubmitSubscribe() {
 	}
 
 	for _, v := range strs {
-		p.conn.Write(pact.SUBACK.Encode([]byte(v)))
+		zap.L().Debug(v)
+		p.conn.Write(pact.SUBSCRIBE.Encode([]byte(v)))
 	}
 }
 
@@ -132,6 +150,7 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 		n, err := conn.Read(body)
 		if err != nil {
 			conn.Close()
+			zap.L().Error(err.Error())
 			return
 		}
 
@@ -186,6 +205,7 @@ func (p *Pollen) typeHandle(t pact.Type, conn *net.TCPConn, body []byte) {
 			callback.Callback.ConnAck(pb)
 		}
 	case pact.PUBLISH:
+		p.pubHandle(body)
 	case pact.PVTPUBLISH:
 		p.pvtPubHandle(body)
 	case pact.PVTPUBACK:
@@ -204,7 +224,7 @@ func (p *Pollen) ping() {
 	}
 }
 
-func (p *Pollen) PubHandle(body []byte) {
+func (p *Pollen) pubHandle(body []byte) {
 	seq, topic, body := pact.PubDecode(body)
 
 	if v := p.subscribe.Get(topic); v != nil {

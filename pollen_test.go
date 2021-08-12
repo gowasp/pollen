@@ -1,6 +1,7 @@
 package pollen
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -38,5 +39,50 @@ func TestPollen_Dial(t *testing.T) {
 		return
 	}
 
+	select {}
+}
+
+func TestPollen_Subscribe(t *testing.T) {
+	l, _ := zap.NewDevelopment()
+	zap.ReplaceGlobals(l)
+
+	p := New()
+	p.Subscribe("a/b", func(c context.Context, b []byte) error {
+		zap.L().Debug(string(b))
+		return nil
+	})
+	p.Subscribe("c/d", func(c context.Context, b []byte) error {
+		zap.L().Debug(string(b))
+		return nil
+	})
+	p.Subscribe("e/f", func(c context.Context, b []byte) error {
+		zap.L().Debug(string(b))
+		return nil
+	})
+
+	callback.Callback.ConnAck = func(ca *corepb.ConnAck) {
+		zap.S().Debug(ca.Time)
+		p.SubmitSubscribe()
+	}
+	p.Dial("localhost:6000")
+}
+
+func TestPollen_Publish(t *testing.T) {
+	l, _ := zap.NewDevelopment()
+	zap.ReplaceGlobals(l)
+	p := New()
+
+	callback.Callback.ConnAck = func(ca *corepb.ConnAck) {
+		zap.S().Debug(ca.Time)
+	}
+
+	go p.Dial("localhost:6000")
+	time.Sleep(5 * time.Second)
+
+	if err := p.Publish(111, "a/b", []byte("pollen1")); err != nil {
+		zap.L().Error(err.Error())
+	}
+	p.Publish(222, "c/d", []byte("pollen2"))
+	p.Publish(333, "e/f", []byte("pollen3"))
 	select {}
 }
