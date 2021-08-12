@@ -77,7 +77,7 @@ func TestPollen_Publish(t *testing.T) {
 	}
 
 	go p.Dial("localhost:6000")
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	if err := p.Publish(111, "a/b", []byte("pollen1")); err != nil {
 		zap.L().Error(err.Error())
