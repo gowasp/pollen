@@ -60,6 +60,17 @@ func (p *Pollen) Subscribe(topic string, f pkg.SubFunc) {
 	p.subscribe.Subscribe(topic, f)
 }
 
+func (p *Pollen) SubmitSubscribe() {
+	strs := p.subscribe.GetTopics()
+	if len(strs) == 0 {
+		return
+	}
+
+	for _, v := range strs {
+		p.conn.Write(pact.SUBACK.Encode([]byte(v)))
+	}
+}
+
 func (p *Pollen) Dial(addr string) {
 	if p.opt.ReadTimeout < 1 {
 		p.opt.ReadTimeout = 5 * 60 * time.Second
