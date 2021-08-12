@@ -2,6 +2,7 @@ package pollen
 
 import (
 	"bytes"
+	"context"
 	"net"
 	"sync"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/google/uuid"
 	"github.com/gowasp/corepb"
+	"github.com/gowasp/pkg"
 	"github.com/gowasp/pkg/pact"
 	"github.com/gowasp/pollen/callback"
 	"go.uber.org/zap"
@@ -24,6 +26,8 @@ type Pollen struct {
 	opt         *Option
 	haveConnect bool
 	conn        *net.TCPConn
+	private     *pkg.Private
+	subscribe   *pkg.Subscribe
 
 	rwmutex sync.RWMutex
 }
@@ -40,6 +44,20 @@ func NewOpt(opt *Option) *Pollen {
 	return &Pollen{
 		opt: opt,
 	}
+}
+
+func (p *Pollen) Private() *pkg.Private {
+	if p.private == nil {
+		p.private = &pkg.Private{}
+	}
+	return p.private
+}
+
+func (p *Pollen) Subscribe(topic string, f pkg.SubFunc) {
+	if p.subscribe == nil {
+		p.subscribe = &pkg.Subscribe{}
+	}
+	p.subscribe.Subscribe(topic, f)
 }
 
 func (p *Pollen) Dial(addr string) {
@@ -156,6 +174,9 @@ func (p *Pollen) typeHandle(t pact.Type, conn *net.TCPConn, body []byte) {
 			go p.ping()
 			callback.Callback.ConnAck(pb)
 		}
+	case pact.PUBLISH:
+	case pact.PVTPUBLISH:
+		p.pvtPubHandle(body)
 	case pact.PVTPUBACK:
 		p.pvtPubAckHandle(body)
 	}
@@ -172,11 +193,38 @@ func (p *Pollen) ping() {
 	}
 }
 
-func (w *Pollen) pvtPubAckHandle(body []byte) {
+func (p *Pollen) PubHandle(body []byte) {
+	seq, topic, body := pact.PubDecode(body)
+
+	if v := p.subscribe.Get(topic); v != nil {
+		ctx := context.WithValue(context.Background(), _CTXSEQ, seq)
+		v(ctx, body)
+	}
+}
+
+func (p *Pollen) pvtPubHandle(body []byte) {
+	seq, topicID, b := pact.PvtPubDecode(body)
+	if v := p.private.Get(topicID); v != nil {
+		ctx := context.WithValue(context.Background(), _CTXSEQ, seq)
+		v(ctx, b)
+	}
+}
+
+func (p *Pollen) pvtPubAckHandle(body []byte) {
 	v, _ := pact.DecodeVarint(body)
 	if callback.Callback.PvtPublishAck != nil {
 		callback.Callback.PvtPublishAck(v)
 	} else {
 		zap.S().Debugf("PVTPUBACK %d", v)
 	}
+}
+
+type ctxString string
+
+const (
+	_CTXSEQ ctxString = "ctxSeq"
+)
+
+func GetCtxSeq(ctx context.Context) int {
+	return ctx.Value(_CTXSEQ).(int)
 }
