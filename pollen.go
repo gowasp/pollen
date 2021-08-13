@@ -208,6 +208,8 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) {
 		}
 	case pkg.FIXED_PUBLISH:
 		p.pubHandle(body)
+	case pkg.FIXED_PUBACK:
+		p.pubAckHandle(body)
 	case pkg.FIXED_PVTPUBLISH:
 		p.pvtPubHandle(body)
 	case pkg.FIXED_PVTPUBACK:
@@ -233,6 +235,15 @@ func (p *Pollen) pubHandle(body []byte) {
 		ctx := context.WithValue(context.Background(), _CTXSEQ, seq)
 		v(ctx, body)
 	}
+}
+
+func (p *Pollen) pubAckHandle(body []byte) {
+	x, _ := pkg.DecodeVarint(body)
+
+	if callback.Callback.PubAck != nil {
+		callback.Callback.PubAck(x)
+	}
+
 }
 
 func (p *Pollen) pvtPubHandle(body []byte) {
