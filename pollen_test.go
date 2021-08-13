@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gowasp/corepb"
-	"github.com/gowasp/pkg/pact"
+	"github.com/gowasp/pkg"
 	"github.com/gowasp/pollen/callback"
 	"go.uber.org/zap"
 )
@@ -28,12 +28,12 @@ func TestPollen_Dial(t *testing.T) {
 
 	x := int(time.Now().Unix())
 	zap.S().Debug(x)
-	y := pact.EncodeVarint(x)
+	y := pkg.EncodeVarint(x)
 
 	a := append([]byte{1}, []byte("pollen")...)
 	y = append(y, a...)
-	c := append(pact.EncodeVarint(len(y)), y...)
-	d := append([]byte{byte(pact.PVTPUBLISH)}, c...)
+	c := append(pkg.EncodeVarint(len(y)), y...)
+	d := append([]byte{byte(pkg.FIXED_PVTPUBLISH)}, c...)
 	if _, err := p.conn.Write(d); err != nil {
 		t.Error(err)
 		return

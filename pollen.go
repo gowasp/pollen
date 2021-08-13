@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gowasp/corepb"
 	"github.com/gowasp/pkg"
-	"github.com/gowasp/pkg/pact"
 	"github.com/gowasp/pollen/callback"
 	"go.uber.org/zap"
 )
@@ -71,7 +70,7 @@ func (p *Pollen) Publish(seq int, topic string, body []byte) error {
 	if p.conn == nil {
 		return ErrConnNotReady
 	}
-	if _, err := p.conn.Write(pact.PubEncode(seq, topic, body)); err != nil {
+	if _, err := p.conn.Write(pkg.PubEncode(seq, topic, body)); err != nil {
 		return err
 	}
 	return nil
@@ -85,7 +84,7 @@ func (p *Pollen) SubmitSubscribe() {
 
 	for _, v := range strs {
 		zap.L().Debug(v)
-		p.conn.Write(pact.SUBSCRIBE.Encode([]byte(v)))
+		p.conn.Write(pkg.FIXED_SUBSCRIBE.Encode([]byte(v)))
 	}
 }
 
@@ -140,7 +139,7 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 				zap.L().Error(err.Error())
 				return
 			}
-			if _, err := conn.Write(pact.CONNECT.Encode(b)); err != nil {
+			if _, err := conn.Write(pkg.FIXED_CONNECT.Encode(b)); err != nil {
 				zap.L().Error(err.Error())
 				return
 			}
@@ -164,24 +163,24 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 				code = buf.Next(1)[0]
 			}
 
-			if code == byte(pact.PING) {
-				p.typeHandle(pact.Type(code), conn, nil)
+			if code == byte(pkg.FIXED_PING) {
+				p.typeHandle(pkg.Fixed(code), conn, nil)
 				code = 0
 				continue
 			}
 
-			size, varintLen = pact.DecodeVarint(buf.Bytes()[0:])
+			size, varintLen = pkg.DecodeVarint(buf.Bytes()[0:])
 			buf.Next(varintLen)
 
 			if size+varintLen+1 == n {
-				p.typeHandle(pact.Type(code), conn, buf.Next(size))
+				p.typeHandle(pkg.Fixed(code), conn, buf.Next(size))
 				size, varintLen = 0, 0
 				code = 0
 				break
 			}
 
 			if size+varintLen+1 < n {
-				p.typeHandle(pact.Type(code), conn, buf.Next(size))
+				p.typeHandle(pkg.Fixed(code), conn, buf.Next(size))
 				code = 0
 				continue
 			}
@@ -191,9 +190,9 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 	}
 }
 
-func (p *Pollen) typeHandle(t pact.Type, conn *net.TCPConn, body []byte) {
+func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) {
 	switch t {
-	case pact.CONNACK:
+	case pkg.FIXED_CONNECT:
 		if callback.Callback.ConnAck != nil {
 			pb := &corepb.ConnAck{}
 			if err := proto.Unmarshal(body, pb); err != nil {
@@ -207,11 +206,11 @@ func (p *Pollen) typeHandle(t pact.Type, conn *net.TCPConn, body []byte) {
 			go p.ping()
 			callback.Callback.ConnAck(pb)
 		}
-	case pact.PUBLISH:
+	case pkg.FIXED_PUBLISH:
 		p.pubHandle(body)
-	case pact.PVTPUBLISH:
+	case pkg.FIXED_PVTPUBLISH:
 		p.pvtPubHandle(body)
-	case pact.PVTPUBACK:
+	case pkg.FIXED_PVTPUBACK:
 		p.pvtPubAckHandle(body)
 	}
 }
@@ -222,13 +221,13 @@ func (p *Pollen) ping() {
 	}
 
 	for {
-		p.conn.Write([]byte{byte(pact.PING)})
+		p.conn.Write([]byte{byte(pkg.FIXED_PING)})
 		time.Sleep(p.opt.PingRate)
 	}
 }
 
 func (p *Pollen) pubHandle(body []byte) {
-	seq, topic, body := pact.PubDecode(body)
+	seq, topic, body := pkg.PubDecode(body)
 
 	if v := p.subscribe.Get(topic); v != nil {
 		ctx := context.WithValue(context.Background(), _CTXSEQ, seq)
@@ -237,7 +236,7 @@ func (p *Pollen) pubHandle(body []byte) {
 }
 
 func (p *Pollen) pvtPubHandle(body []byte) {
-	seq, topicID, b := pact.PvtPubDecode(body)
+	seq, topicID, b := pkg.PvtPubDecode(body)
 	if v := p.private.Get(topicID); v != nil {
 		ctx := context.WithValue(context.Background(), _CTXSEQ, seq)
 		v(ctx, b)
@@ -245,7 +244,7 @@ func (p *Pollen) pvtPubHandle(body []byte) {
 }
 
 func (p *Pollen) pvtPubAckHandle(body []byte) {
-	v, _ := pact.DecodeVarint(body)
+	v, _ := pkg.DecodeVarint(body)
 	if callback.Callback.PvtPublishAck != nil {
 		callback.Callback.PvtPublishAck(v)
 	} else {
