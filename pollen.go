@@ -64,13 +64,13 @@ var (
 	ErrConnNotReady = errors.New("connection not ready")
 )
 
-func (p *Pollen) Publish(seq int, topic string, body []byte) error {
+func (p *Pollen) Publish(topic string, body []byte) error {
 	p.rwmutex.RLock()
 	defer p.rwmutex.RUnlock()
 	if p.conn == nil {
 		return ErrConnNotReady
 	}
-	if _, err := p.conn.Write(pkg.PubEncode(seq, topic, body)); err != nil {
+	if _, err := p.conn.Write(pkg.PubEncode(topic, body)); err != nil {
 		return err
 	}
 	return nil
@@ -229,7 +229,7 @@ func (p *Pollen) ping() {
 }
 
 func (p *Pollen) pubHandle(body []byte) {
-	seq, topic, body := pkg.PubDecode(body)
+	seq, topic, body := pkg.PubDecodeSeq(body)
 
 	if v := p.subscribe.Get(topic); v != nil {
 		ctx := context.WithValue(context.Background(), _CTXSEQ, seq)
