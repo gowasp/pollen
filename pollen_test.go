@@ -79,10 +79,10 @@ func TestPollen_Publish(t *testing.T) {
 	go p.Dial("localhost:6000")
 	time.Sleep(1 * time.Second)
 
-	if err := p.Publish(111, "a/b", []byte("pollen1")); err != nil {
+	if err := p.Publish("a/b", []byte("pollen1")); err != nil {
 		zap.L().Error(err.Error())
 	}
-	p.Publish(222, "c/d", []byte("pollen2"))
-	p.Publish(333, "e/f", []byte("pollen3"))
+	p.Publish("c/d", []byte("pollen2"))
+	p.Publish("e/f", []byte("pollen3"))
 	select {}
 }
