@@ -233,7 +233,12 @@ func (p *Pollen) pubHandle(body []byte) {
 
 	if v := p.subscribe.Get(topic); v != nil {
 		ctx := context.WithValue(context.Background(), _CTXSEQ, seq)
-		v(ctx, body)
+		if err := v(ctx, body); err == nil {
+			b := pkg.EncodeVarint(seq)
+			if _, err := p.conn.Write(pkg.FIXED_PUBACK.Encode(b)); err != nil {
+				zap.L().Error(err.Error())
+			}
+		}
 	}
 }
 
