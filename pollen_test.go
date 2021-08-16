@@ -67,9 +67,8 @@ func TestPollen_Subscribe(t *testing.T) {
 		zap.S().Debug(ca.Time)
 		p.SubmitSubscribe()
 	}
-	p.opt.Username = "uB7lB9qZ2fD0iV8a"
-	p.opt.Password = "wP8dE1bZ8kY1xZ9pQ9rZ0sC9bB0yO6qF"
 
+	p.opt.UDID = "95270ee2-ce17-4de5-b12b-f3d0a40c387d"
 	p.opt.Username = "uB7lB9qZ2fD0iV8a"
 	p.opt.Password = "wP8dE1bZ8kY1xZ9pQ9rZ0sC9bB0yO6qF"
 
@@ -119,7 +118,7 @@ func TestPollen_Publish(t *testing.T) {
 	if err := p.Publish("a/b", []byte("pollen1")); err != nil {
 		zap.L().Error(err.Error())
 	}
-	p.Publish("c/d", []byte("pollen2"))
-	p.Publish("e/f", []byte("pollen3"))
+	p.Publish("c/d", nil)
+	p.Publish("e/f", nil)
 	select {}
 }
