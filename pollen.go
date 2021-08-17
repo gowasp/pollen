@@ -26,7 +26,6 @@ type Pollen struct {
 	opt         *Option
 	haveConnect bool
 	conn        *net.TCPConn
-	private     *pkg.Private
 	subscribe   *pkg.Subscribe
 
 	rwmutex sync.RWMutex
@@ -44,13 +43,6 @@ func NewOpt(opt *Option) *Pollen {
 	return &Pollen{
 		opt: opt,
 	}
-}
-
-func (p *Pollen) Private() *pkg.Private {
-	if p.private == nil {
-		p.private = &pkg.Private{}
-	}
-	return p.private
 }
 
 func (p *Pollen) Subscribe(topic string, f pkg.SubFunc) {
