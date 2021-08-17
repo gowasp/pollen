@@ -244,9 +244,9 @@ func (p *Pollen) pubAckHandle(body []byte) {
 	zap.L().Info("successfully connected to server",
 		zap.String("local_addr", p.conn.LocalAddr().String()),
 		zap.String("remote_addr", p.conn.RemoteAddr().String()))
-	x, _ := pkg.DecodeVarint(body)
 
 	if callback.Callback.PubAck != nil {
+		x, _ := pkg.DecodeVarint(body)
 		callback.Callback.PubAck(x)
 	}
 
