@@ -68,16 +68,24 @@ func (p *Pollen) Publish(topic string, body []byte) error {
 	return nil
 }
 
-func (p *Pollen) SubmitSubscribe() {
+func (p *Pollen) SubmitSubscribe() error {
 	strs := p.subscribe.GetTopics()
 	if len(strs) == 0 {
-		return
+		return nil
+	}
+	if p.conn == nil {
+		return ErrConnNotReady
 	}
 
+	buf := &bytes.Buffer{}
 	for _, v := range strs {
-		zap.L().Debug(v)
-		p.conn.Write(pkg.FIXED_SUBSCRIBE.Encode([]byte(v)))
+		sln := append([]byte{byte(len(v))}, v...)
+		buf.Write(sln)
 	}
+	if _, err := p.conn.Write(pkg.FIXED_SUBSCRIBE.Encode(buf.Bytes())); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p *Pollen) Dial(addr string) {
