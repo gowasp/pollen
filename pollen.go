@@ -210,10 +210,6 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) {
 		p.pubHandle(body)
 	case pkg.FIXED_PUBACK:
 		p.pubAckHandle(body)
-	case pkg.FIXED_PVTPUBLISH:
-		p.pvtPubHandle(body)
-	case pkg.FIXED_PVTPUBACK:
-		p.pvtPubAckHandle(body)
 	}
 }
 
@@ -249,23 +245,6 @@ func (p *Pollen) pubAckHandle(body []byte) {
 		callback.Callback.PubAck(x)
 	}
 
-}
-
-func (p *Pollen) pvtPubHandle(body []byte) {
-	seq, topicID, b := pkg.PvtPubDecode(body)
-	if v := p.private.Get(topicID); v != nil {
-		ctx := context.WithValue(context.Background(), _CTXSEQ, seq)
-		v(ctx, b)
-	}
-}
-
-func (p *Pollen) pvtPubAckHandle(body []byte) {
-	v, _ := pkg.DecodeVarint(body)
-	if callback.Callback.PvtPublishAck != nil {
-		callback.Callback.PvtPublishAck(v)
-	} else {
-		zap.S().Debugf("PVTPUBACK %d", v)
-	}
 }
 
 type ctxString string
