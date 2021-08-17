@@ -150,6 +150,7 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 		n, err := conn.Read(body)
 		if err != nil {
 			conn.Close()
+			p.haveConnect = false
 			zap.L().Error(err.Error())
 			return
 		}
