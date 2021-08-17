@@ -123,6 +123,7 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 		// set timeout.
 		err := conn.SetReadDeadline(time.Now().Add(p.opt.ReadTimeout))
 		if err != nil {
+			zap.L().Error(err.Error())
 			return
 		}
 
