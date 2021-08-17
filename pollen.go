@@ -165,7 +165,7 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 				code = buf.Next(1)[0]
 			}
 
-			if code == byte(pkg.FIXED_PING) {
+			if code == byte(pkg.FIXED_PONG) {
 				p.typeHandle(pkg.Fixed(code), conn, nil)
 				code = 0
 				continue
@@ -210,6 +210,10 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) {
 				zap.String("remote_addr", p.conn.RemoteAddr().String()))
 			go p.ping()
 			callback.Callback.ConnAck(pb)
+		}
+	case pkg.FIXED_PONG:
+		if callback.Callback.Pong != nil {
+			callback.Callback.Pong(conn.RemoteAddr().String())
 		}
 	case pkg.FIXED_PUBLISH:
 		p.pubHandle(body)
