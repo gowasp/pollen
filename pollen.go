@@ -197,6 +197,15 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) {
 	switch t {
 	case pkg.FIXED_CONNACK:
+		p.rwmutex.Lock()
+		p.conn = conn
+		p.rwmutex.Unlock()
+		zap.L().Info("successfully connected to server",
+			zap.String("local_addr", p.conn.LocalAddr().String()),
+			zap.String("remote_addr", p.conn.RemoteAddr().String()))
+
+		go p.ping()
+
 		if callback.Callback.ConnAck != nil {
 			pb := &corepb.ConnAck{}
 			if err := proto.Unmarshal(body, pb); err != nil {
@@ -204,13 +213,6 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) {
 				return
 			}
 
-			p.rwmutex.Lock()
-			p.conn = conn
-			p.rwmutex.Unlock()
-			zap.L().Info("successfully connected to server",
-				zap.String("local_addr", p.conn.LocalAddr().String()),
-				zap.String("remote_addr", p.conn.RemoteAddr().String()))
-			go p.ping()
 			callback.Callback.ConnAck(pb)
 		}
 	case pkg.FIXED_PONG:
