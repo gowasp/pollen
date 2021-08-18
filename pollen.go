@@ -239,11 +239,11 @@ func (p *Pollen) ping() {
 }
 
 func (p *Pollen) pubHandle(body []byte) {
-	seq, topic, body := pkg.PubDecodeSeq(body)
+	seq, topic, newbody := pkg.PubDecodeSeq(body)
 
 	if v := p.subscribe.Get(topic); v != nil {
 		ctx := context.WithValue(context.Background(), _CTXSEQ, seq)
-		if err := v(ctx, body); err == nil {
+		if err := v(ctx, newbody); err == nil {
 			b := pkg.EncodeVarint(seq)
 			if _, err := p.conn.Write(pkg.FIXED_PUBACK.Encode(b)); err != nil {
 				zap.L().Error(err.Error())
