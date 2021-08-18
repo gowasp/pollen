@@ -167,7 +167,7 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 				code = buf.Next(1)[0]
 			}
 
-			if code == byte(pkg.FIXED_PING) {
+			if code == byte(pkg.FIXED_PONG) {
 				p.typeHandle(pkg.Fixed(code), conn, nil)
 				code = 0
 				continue
