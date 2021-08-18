@@ -167,29 +167,30 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 				code = buf.Next(1)[0]
 			}
 
-			if code == byte(pkg.FIXED_PONG) {
+			if code == byte(pkg.FIXED_PING) {
 				p.typeHandle(pkg.Fixed(code), conn, nil)
 				code = 0
 				continue
 			}
 
-			size, varintLen = pkg.DecodeVarint(buf.Bytes()[0:])
-			buf.Next(varintLen)
+			if varintLen == 0 {
+				size, varintLen = pkg.DecodeVarint(buf.Bytes())
+				buf.Next(varintLen)
+			}
 
-			if size+varintLen+1 == n {
+			if size == buf.Len() {
 				p.typeHandle(pkg.Fixed(code), conn, buf.Next(size))
 				size, varintLen = 0, 0
 				code = 0
 				break
-			}
-
-			if size+varintLen+1 < n {
+			} else if size < buf.Len() {
 				p.typeHandle(pkg.Fixed(code), conn, buf.Next(size))
+				size, varintLen = 0, 0
 				code = 0
 				continue
+			} else {
+				break
 			}
-			break
-
 		}
 	}
 }
