@@ -80,8 +80,10 @@ func (p *Pollen) SubmitSubscribe() error {
 	buf := &bytes.Buffer{}
 	for _, v := range strs {
 		sln := append([]byte{byte(len(v))}, v...)
+		sln = append(sln, '\n')
 		buf.Write(sln)
 	}
+
 	if _, err := p.conn.Write(pkg.FIXED_SUBSCRIBE.Encode(buf.Bytes())); err != nil {
 		return err
 	}
