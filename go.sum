@@ -19,6 +19,10 @@ github.com/gowasp/pkg v0.0.0-20210817034345-959efb0e509c h1:qa+f0NxMFY6QJu+IPR2D
 github.com/gowasp/pkg v0.0.0-20210817034345-959efb0e509c/go.mod h1:fA7okL9O1DnPE+kNoQ5iE748LepdzivU29cx2GL4sDg=
 github.com/gowasp/pkg v0.0.0-20210817090906-d1713a571882 h1:l3CPVYDypAVsn4vK4TYcJ7cBHgG51eqIq4NkpmeMxcY=
 github.com/gowasp/pkg v0.0.0-20210817090906-d1713a571882/go.mod h1:fA7okL9O1DnPE+kNoQ5iE748LepdzivU29cx2GL4sDg=
+github.com/gowasp/pkg v0.0.0-20210819035940-e5c12561c424 h1:xccFkkN+yNh2DZu/NzWTyW7pnMrKrmWe195oG2kj2NU=
+github.com/gowasp/pkg v0.0.0-20210819035940-e5c12561c424/go.mod h1:fA7okL9O1DnPE+kNoQ5iE748LepdzivU29cx2GL4sDg=
+github.com/gowasp/pkg v0.0.0-20210819040225-d90c1c2e57ec h1:smBhJnKvLDlJNhsGDCzUhbMFdZZfT7ERve56iIqP6MM=
+github.com/gowasp/pkg v0.0.0-20210819040225-d90c1c2e57ec/go.mod h1:fA7okL9O1DnPE+kNoQ5iE748LepdzivU29cx2GL4sDg=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
