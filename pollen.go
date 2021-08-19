@@ -45,6 +45,10 @@ func NewOpt(opt *Option) *Pollen {
 	}
 }
 
+func (p *Pollen) Opt() *Option {
+	return p.opt
+}
+
 func (p *Pollen) Subscribe(topic string, f pkg.SubFunc) {
 	if p.subscribe == nil {
 		p.subscribe = &pkg.Subscribe{}
