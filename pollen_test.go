@@ -31,9 +31,10 @@ func TestPollen_Subscribe(t *testing.T) {
 		return nil
 	})
 
-	callback.Callback.ConnAck = func(ca *corepb.ConnAck) {
+	callback.Callback.ConnAck = func(s1, s2 string, ca *corepb.ConnAck) {
 		zap.S().Debug(ca.Time)
 		p.SubmitSubscribe()
+
 	}
 
 	p.opt.UDID = "95270ee2-ce17-4de5-b12b-f3d0a40c387d"
@@ -76,10 +77,9 @@ func TestPollen_Publish(t *testing.T) {
 
 	p.opt.Password = b64
 
-	callback.Callback.ConnAck = func(ca *corepb.ConnAck) {
+	callback.Callback.ConnAck = func(s1, s2 string, ca *corepb.ConnAck) {
 		zap.S().Debug(ca.Time)
 	}
-
 	go p.Dial("localhost:6000")
 	time.Sleep(2 * time.Second)
 

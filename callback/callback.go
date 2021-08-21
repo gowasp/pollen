@@ -3,7 +3,7 @@ package callback
 import "github.com/gowasp/corepb"
 
 type callback struct {
-	ConnAck func(*corepb.ConnAck)
+	ConnAck func(string, string, *corepb.ConnAck)
 	Pong    func(string)
 	PubAck  func(int)
 

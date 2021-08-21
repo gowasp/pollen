@@ -211,9 +211,6 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) {
 		p.rwmutex.Lock()
 		p.conn = conn
 		p.rwmutex.Unlock()
-		zap.L().Info("successfully connected to server",
-			zap.String("local_addr", p.conn.LocalAddr().String()),
-			zap.String("remote_addr", p.conn.RemoteAddr().String()))
 
 		go p.ping()
 
@@ -224,7 +221,7 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) {
 				return
 			}
 
-			callback.Callback.ConnAck(pb)
+			callback.Callback.ConnAck(conn.LocalAddr().String(), conn.RemoteAddr().String(), pb)
 		}
 	case pkg.FIXED_PONG:
 		if callback.Callback.Pong != nil {
