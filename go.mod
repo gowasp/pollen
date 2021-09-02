@@ -2,6 +2,8 @@ module github.com/gowasp/pollen
 
 go 1.16
 
+retract v1.0.10
+
 require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.0
