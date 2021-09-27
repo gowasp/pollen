@@ -99,19 +99,21 @@ func (p *Pollen) Dial(addr string) {
 		p.opt.ReadTimeout = 5 * 60 * time.Second
 	}
 
-	raddr, err := net.ResolveTCPAddr("tcp", addr)
-	if err != nil {
-		zap.L().Error(err.Error())
-		return
-	}
-
 	var retryTime = 1 * time.Second
 	for {
+		raddr, err := net.ResolveTCPAddr("tcp", addr)
+		if err != nil {
+			zap.L().Error(err.Error())
+			goto NEXT
+		}
+
 		if conn, err := net.DialTCP("tcp", nil, raddr); err != nil {
 			zap.L().Error(err.Error())
 		} else {
 			p.handle(conn)
 		}
+
+	NEXT:
 		time.Sleep(retryTime)
 		retryTime = retryTime + 1*time.Second
 
