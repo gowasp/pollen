@@ -208,6 +208,9 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 }
 
 func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) {
+	if len(body) == 0 {
+		return
+	}
 	switch t {
 	case pkg.FIXED_CONNACK:
 		p.rwmutex.Lock()
