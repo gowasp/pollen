@@ -234,7 +234,10 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) {
 			callback.Callback.Pong(conn.RemoteAddr().String())
 		}
 	case pkg.FIXED_PUBLISH:
-		p.pubHandle(body)
+		if err := p.pubHandle(body); err != nil {
+			conn.Close()
+		}
+		return
 	case pkg.FIXED_PUBACK:
 		p.pubAckHandle(body)
 	}
@@ -251,10 +254,10 @@ func (p *Pollen) ping() {
 	}
 }
 
-func (p *Pollen) pubHandle(body []byte) {
+func (p *Pollen) pubHandle(body []byte) error {
 	seq, topic, newbody, err := pkg.PubDecodeSeq(body)
 	if err != nil {
-		return
+		return err
 	}
 
 	if v := p.subscribe.Get(topic); v != nil {
@@ -266,6 +269,7 @@ func (p *Pollen) pubHandle(body []byte) {
 			}
 		}
 	}
+	return nil
 }
 
 func (p *Pollen) pubAckHandle(body []byte) {
