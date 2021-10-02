@@ -194,6 +194,7 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 				p.typeHandle(pkg.Fixed(code), conn, buf.Next(size))
 				size, varintLen = 0, 0
 				code = 0
+				buf.Reset()
 				break
 			} else if size < buf.Len() {
 				p.typeHandle(pkg.Fixed(code), conn, buf.Next(size))
