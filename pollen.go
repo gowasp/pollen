@@ -252,7 +252,10 @@ func (p *Pollen) ping() {
 }
 
 func (p *Pollen) pubHandle(body []byte) {
-	seq, topic, newbody := pkg.PubDecodeSeq(body)
+	seq, topic, newbody, err := pkg.PubDecodeSeq(body)
+	if err != nil {
+		return
+	}
 
 	if v := p.subscribe.Get(topic); v != nil {
 		ctx := context.WithValue(context.Background(), _CTXSEQ, seq)
