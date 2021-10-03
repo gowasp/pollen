@@ -180,7 +180,10 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 			}
 
 			if code == byte(pkg.FIXED_PONG) {
-				p.typeHandle(pkg.Fixed(code), conn, nil)
+				if err := p.typeHandle(pkg.Fixed(code), conn, nil); err != nil {
+					conn.Close()
+					return
+				}
 				code = 0
 				continue
 			}
@@ -191,13 +194,19 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 			}
 
 			if size == buf.Len() {
-				p.typeHandle(pkg.Fixed(code), conn, buf.Next(size))
+				if err := p.typeHandle(pkg.Fixed(code), conn, buf.Next(size)); err != nil {
+					conn.Close()
+					return
+				}
 				size, varintLen = 0, 0
 				code = 0
 				buf.Reset()
 				break
 			} else if size < buf.Len() {
-				p.typeHandle(pkg.Fixed(code), conn, buf.Next(size))
+				if err := p.typeHandle(pkg.Fixed(code), conn, buf.Next(size)); err != nil {
+					conn.Close()
+					return
+				}
 				size, varintLen = 0, 0
 				code = 0
 				continue
@@ -208,10 +217,7 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 	}
 }
 
-func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) {
-	if len(body) == 0 {
-		return
-	}
+func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) error {
 	switch t {
 	case pkg.FIXED_CONNACK:
 		p.rwmutex.Lock()
@@ -224,23 +230,32 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) {
 			pb := &corepb.ConnAck{}
 			if err := proto.Unmarshal(body, pb); err != nil {
 				zap.L().Error(err.Error())
-				return
+				return errors.New("error data")
 			}
 
 			callback.Callback.ConnAck(conn.LocalAddr().String(), conn.RemoteAddr().String(), pb)
 		}
+		return nil
 	case pkg.FIXED_PONG:
 		if callback.Callback.Pong != nil {
 			callback.Callback.Pong(conn.RemoteAddr().String())
 		}
+		return nil
 	case pkg.FIXED_PUBLISH:
+		if len(body) == 0 {
+			return errors.New("error data")
+		}
 		if err := p.pubHandle(body); err != nil {
 			conn.Close()
 		}
-		return
+		return nil
 	case pkg.FIXED_PUBACK:
 		p.pubAckHandle(body)
+		return nil
+	default:
+		return errors.New("error data")
 	}
+
 }
 
 func (p *Pollen) ping() {
