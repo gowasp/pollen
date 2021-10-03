@@ -247,6 +247,7 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) error {
 		}
 		if err := p.pubHandle(body); err != nil {
 			conn.Close()
+			return err
 		}
 		return nil
 	case pkg.FIXED_PUBACK:
