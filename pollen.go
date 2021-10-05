@@ -68,16 +68,7 @@ func (p *Pollen) Publish(topic string, body []byte) error {
 		return ErrConnNotReady
 	}
 
-	pb := &corepb.Publish{
-		Topic: topic,
-		Body:  body,
-	}
-
-	pbody, err := proto.Marshal(pb)
-	if err != nil {
-		return err
-	}
-	if _, err := p.conn.Write(pkg.FIXED_PUBLISH.Encode(pbody)); err != nil {
+	if _, err := p.conn.Write(pkg.PubEncode(topic, body)); err != nil {
 		return err
 	}
 	return nil
