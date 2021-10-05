@@ -102,7 +102,7 @@ func (p *Pollen) Dial(addr string) {
 
 	var retryTime = 1 * time.Second
 	for {
-		if conn, err := net.Dial("tcp", addr); err != nil {
+		if conn, err := net.DialTimeout("tcp", addr, 5*time.Second); err != nil {
 			zap.L().Error(err.Error())
 		} else {
 			if err := p.connect(conn.(*net.TCPConn)); err != nil {
