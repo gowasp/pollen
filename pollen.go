@@ -155,12 +155,12 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 	reader := bufio.NewReader(conn)
 	buf := new(bytes.Buffer)
 	var (
-		offset    int
-		varintLen int
-		size      int
-		code      byte
-
-		//ctx context.Context
+		offset     int
+		varintLen  int
+		topicLen   int
+		size       int
+		code       byte
+		topicBytes = make([]byte, 0)
 	)
 	for {
 		// set timeout.
@@ -175,12 +175,24 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 
 			if code == 0 {
 				code = b
-				if code == byte(pkg.FIXED_PONG) {
+				if pkg.Fixed(code) == pkg.FIXED_PONG {
 					offset, varintLen, size, code = 0, 0, 0, 0
 					buf.Reset()
 					break
 				}
 				continue
+			}
+
+			if pkg.Fixed(code) == pkg.FIXED_PUBLISH {
+				if topicLen == 0 {
+					topicLen = int(b)
+					continue
+				}
+				if topicLen != len(topicBytes) {
+					topicBytes = append(topicBytes, b)
+					continue
+				}
+
 			}
 
 			if varintLen == 0 {
