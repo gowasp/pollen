@@ -146,12 +146,13 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 	reader := bufio.NewReader(conn)
 	buf := new(bytes.Buffer)
 	var (
-		offset     int
-		varintLen  int
-		topicLen   int
-		size       int
-		code       byte
-		topicBytes = make([]byte, 0)
+		offset      int
+		varintLen   int
+		topicLen    int
+		size        int
+		code        byte
+		topicBytes  = make([]byte, 0)
+		varintBytes = make([]byte, 0)
 	)
 	for {
 		// set timeout.
@@ -184,6 +185,29 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 					continue
 				}
 
+				if varintLen == 0 {
+					varintLen = int(b)
+					continue
+				}
+
+				varintBytes = append(varintBytes, b)
+				offset++
+
+				if offset == varintLen {
+					px, pn := proto.DecodeVarint(varintBytes)
+					size = int(px) + pn
+				}
+				buf.WriteByte(b)
+				if offset == size && size != 0 {
+					buf.Next(varintLen)
+					p.pubHandle(string(topicBytes), buf)
+					offset, varintLen, size, code, topicLen = 0, 0, 0, 0, 0
+					buf.Reset()
+					topicBytes = make([]byte, 0)
+					varintBytes = make([]byte, 0)
+					break
+				}
+				continue
 			}
 
 			if varintLen == 0 {
@@ -235,12 +259,6 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, buf *bytes.Buffer) e
 			callback.Callback.Pong(conn.RemoteAddr().String())
 		}
 		return nil
-	case pkg.FIXED_PUBLISH:
-		if err := p.pubHandle(buf); err != nil {
-			conn.Close()
-			return err
-		}
-		return nil
 	default:
 		return errors.New("error data")
 	}
@@ -262,14 +280,9 @@ func (p *Pollen) ping() {
 	}
 }
 
-func (p *Pollen) pubHandle(buf *bytes.Buffer) error {
-	publish := &corepb.Publish{}
-	if err := proto.Unmarshal(buf.Bytes(), publish); err != nil {
-		zap.L().Error(err.Error())
-		return err
-	}
-	if v := p.subscribe.Get(publish.Topic); v != nil {
-		v(publish.Body)
+func (p *Pollen) pubHandle(topic string, buf *bytes.Buffer) error {
+	if v := p.subscribe.Get(topic); v != nil {
+		v(buf.Bytes())
 	}
 	return nil
 }
