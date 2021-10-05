@@ -110,6 +110,9 @@ func (p *Pollen) Dial(addr string) {
 		if conn, err := net.DialTCP("tcp", nil, raddr); err != nil {
 			zap.L().Error(err.Error())
 		} else {
+			if err := p.connect(conn); err != nil {
+				goto NEXT
+			}
 			p.handle(conn)
 		}
 
@@ -121,6 +124,26 @@ func (p *Pollen) Dial(addr string) {
 			retryTime = 1 * time.Second
 		}
 	}
+}
+
+func (p *Pollen) connect(conn *net.TCPConn) error {
+	pb := &corepb.Connect{
+		Udid:     p.opt.UDID,
+		Group:    p.opt.Group,
+		Username: p.opt.Username,
+		Password: p.opt.Password,
+	}
+
+	b, err := proto.Marshal(pb)
+	if err != nil {
+		zap.L().Error(err.Error())
+		return err
+	}
+	if _, err := conn.Write(pkg.FIXED_CONNECT.Encode(b)); err != nil {
+		zap.L().Error(err.Error())
+		return err
+	}
+	return nil
 }
 
 func (p *Pollen) handle(conn *net.TCPConn) {
