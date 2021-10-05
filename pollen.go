@@ -1,6 +1,7 @@
 package pollen
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -72,7 +73,7 @@ func (p *Pollen) Publish(topic string, body []byte) error {
 	return nil
 }
 
-func (p *Pollen) SubmitSubscribe() error {
+func (p *Pollen) submitSubscribe() error {
 	strs := p.subscribe.GetTopics()
 	if len(strs) == 0 {
 		return nil
@@ -88,7 +89,7 @@ func (p *Pollen) SubmitSubscribe() error {
 	}
 
 	buf.Truncate(buf.Len() - 1)
-	if _, err := p.conn.Write(pkg.FIXED_SUBSCRIBE.Encode(buf.Bytes())); err != nil {
+	if _, err := p.conn.Write(pkg.SubEncode(buf.Bytes())); err != nil {
 		return err
 	}
 	return nil
@@ -111,6 +112,7 @@ func (p *Pollen) Dial(addr string) {
 			zap.L().Error(err.Error())
 		} else {
 			p.handle(conn)
+			retryTime = 1 * time.Second
 		}
 
 	NEXT:
@@ -124,100 +126,60 @@ func (p *Pollen) Dial(addr string) {
 }
 
 func (p *Pollen) handle(conn *net.TCPConn) {
-	body := make([]byte, 4096)
-	buf := &bytes.Buffer{}
-
+	reader := bufio.NewReader(conn)
+	buf := new(bytes.Buffer)
 	var (
-		code byte
+		offset    int
+		varintLen int
+		size      int
+		code      byte
 
-		size, varintLen int
+		//ctx context.Context
 	)
 	for {
-
 		// set timeout.
-		err := conn.SetReadDeadline(time.Now().Add(p.opt.ReadTimeout))
-		if err != nil {
-			zap.L().Error(err.Error())
-			return
-		}
-
-		if !p.haveConnect {
-			pb := &corepb.Connect{
-				Udid:     p.opt.UDID,
-				Group:    p.opt.Group,
-				Username: p.opt.Username,
-				Password: p.opt.Password,
-			}
-
-			b, err := proto.Marshal(pb)
-			if err != nil {
-				zap.L().Error(err.Error())
-				return
-			}
-			if _, err := conn.Write(pkg.FIXED_CONNECT.Encode(b)); err != nil {
-				zap.L().Error(err.Error())
-				return
-			}
-			p.haveConnect = true
-		}
-
-		n, err := conn.Read(body)
-		if err != nil {
-			conn.Close()
-			p.haveConnect = false
-			zap.L().Error(err.Error())
-			return
-		}
-
-		buf.Write(body[:n])
-
+		conn.SetReadDeadline(time.Now().Add(p.opt.ReadTimeout))
 		for {
-			if buf.Len() == 0 {
-				break
-			}
-			if code == 0 {
-				code = buf.Next(1)[0]
+			b, err := reader.ReadByte()
+			if err != nil {
+				conn.Close()
+				zap.L().Error(err.Error())
+				return
 			}
 
-			if code == byte(pkg.FIXED_PONG) {
-				if err := p.typeHandle(pkg.Fixed(code), conn, nil); err != nil {
-					conn.Close()
-					return
+			if code == 0 {
+				code = b
+				if code == byte(pkg.FIXED_PONG) {
+					offset, varintLen, size, code = 0, 0, 0, 0
 				}
-				code = 0
 				continue
 			}
 
 			if varintLen == 0 {
-				size, varintLen = pkg.DecodeVarint(buf.Bytes())
-				buf.Next(varintLen)
+				varintLen = int(b)
+				continue
 			}
 
-			if size == buf.Len() {
-				if err := p.typeHandle(pkg.Fixed(code), conn, buf.Next(size)); err != nil {
-					conn.Close()
-					return
-				}
-				size, varintLen = 0, 0
-				code = 0
+			buf.WriteByte(b)
+			offset++
+
+			if offset == varintLen {
+				px, pn := proto.DecodeVarint(buf.Next(offset))
+				size = int(px) + pn
+			}
+
+			if offset == size && size != 0 {
+				p.typeHandle(pkg.Fixed(code), conn, buf)
+
 				buf.Reset()
-				break
-			} else if size < buf.Len() {
-				if err := p.typeHandle(pkg.Fixed(code), conn, buf.Next(size)); err != nil {
-					conn.Close()
-					return
-				}
-				size, varintLen = 0, 0
-				code = 0
-				continue
-			} else {
+				offset, varintLen, size, code = 0, 0, 0, 0
 				break
 			}
 		}
 	}
 }
 
-func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) error {
+func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, buf *bytes.Buffer) error {
 	switch t {
 	case pkg.FIXED_CONNACK:
 		p.rwmutex.Lock()
@@ -226,9 +188,10 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) error {
 
 		go p.ping()
 
+		go p.submitSubscribe()
 		if callback.Callback.ConnAck != nil {
 			pb := &corepb.ConnAck{}
-			if err := proto.Unmarshal(body, pb); err != nil {
+			if err := proto.Unmarshal(buf.Bytes(), pb); err != nil {
 				zap.L().Error(err.Error())
 				return errors.New("error data")
 			}
@@ -242,16 +205,10 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, body []byte) error {
 		}
 		return nil
 	case pkg.FIXED_PUBLISH:
-		if len(body) == 0 {
-			return errors.New("error data")
-		}
-		if err := p.pubHandle(body); err != nil {
+		if err := p.pubHandle(buf); err != nil {
 			conn.Close()
 			return err
 		}
-		return nil
-	case pkg.FIXED_PUBACK:
-		p.pubAckHandle(body)
 		return nil
 	default:
 		return errors.New("error data")
@@ -265,25 +222,20 @@ func (p *Pollen) ping() {
 	}
 
 	for {
-		p.conn.Write([]byte{byte(pkg.FIXED_PING)})
+		if _, err := p.conn.Write([]byte{byte(pkg.FIXED_PING)}); err != nil {
+			zap.L().Warn(err.Error())
+			p.conn.Close()
+			return
+		}
 		time.Sleep(p.opt.PingRate)
 	}
 }
 
-func (p *Pollen) pubHandle(body []byte) error {
-	seq, topic, newbody, err := pkg.PubDecodeSeq(body)
-	if err != nil {
-		return err
-	}
-
+func (p *Pollen) pubHandle(buf *bytes.Buffer) error {
+	topicLen := buf.Next(1)[0]
+	topic := string(buf.Next(int(topicLen)))
 	if v := p.subscribe.Get(topic); v != nil {
-		ctx := context.WithValue(context.Background(), _CTXSEQ, seq)
-		if err := v(ctx, newbody); err == nil {
-			b := pkg.EncodeVarint(seq)
-			if _, err := p.conn.Write(pkg.FIXED_PUBACK.Encode(b)); err != nil {
-				zap.L().Error(err.Error())
-			}
-		}
+		v(buf.Bytes())
 	}
 	return nil
 }
