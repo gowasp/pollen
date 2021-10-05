@@ -177,6 +177,8 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 				code = b
 				if code == byte(pkg.FIXED_PONG) {
 					offset, varintLen, size, code = 0, 0, 0, 0
+					buf.Reset()
+					break
 				}
 				continue
 			}
@@ -264,7 +266,7 @@ func (p *Pollen) pubHandle(buf *bytes.Buffer) error {
 		return err
 	}
 	if v := p.subscribe.Get(publish.Topic); v != nil {
-		v(buf.Bytes())
+		v(publish.Body)
 	}
 	return nil
 }
