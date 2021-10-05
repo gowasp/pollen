@@ -67,7 +67,17 @@ func (p *Pollen) Publish(topic string, body []byte) error {
 	if p.conn == nil {
 		return ErrConnNotReady
 	}
-	if _, err := p.conn.Write(pkg.PubEncode(topic, body)); err != nil {
+
+	pb := &corepb.Publish{
+		Topic: topic,
+		Body:  body,
+	}
+
+	pbody, err := proto.Marshal(pb)
+	if err != nil {
+		return err
+	}
+	if _, err := p.conn.Write(pkg.FIXED_PUBLISH.Encode(pbody)); err != nil {
 		return err
 	}
 	return nil
@@ -89,7 +99,7 @@ func (p *Pollen) submitSubscribe() error {
 	}
 
 	buf.Truncate(buf.Len() - 1)
-	if _, err := p.conn.Write(pkg.SubEncode(buf.Bytes())); err != nil {
+	if _, err := p.conn.Write(pkg.FIXED_SUBSCRIBE.Encode(buf.Bytes())); err != nil {
 		return err
 	}
 	return nil
@@ -134,7 +144,7 @@ func (p *Pollen) connect(conn *net.TCPConn) error {
 		zap.L().Error(err.Error())
 		return err
 	}
-	if _, err := conn.Write(pkg.ConnectEncode(b)); err != nil {
+	if _, err := conn.Write(pkg.FIXED_CONNECT.Encode(b)); err != nil {
 		zap.L().Error(err.Error())
 		return err
 	}
@@ -248,9 +258,12 @@ func (p *Pollen) ping() {
 }
 
 func (p *Pollen) pubHandle(buf *bytes.Buffer) error {
-	topicLen := buf.Next(1)[0]
-	topic := string(buf.Next(int(topicLen)))
-	if v := p.subscribe.Get(topic); v != nil {
+	publish := &corepb.Publish{}
+	if err := proto.Unmarshal(buf.Bytes(), publish); err != nil {
+		zap.L().Error(err.Error())
+		return err
+	}
+	if v := p.subscribe.Get(publish.Topic); v != nil {
 		v(buf.Bytes())
 	}
 	return nil
