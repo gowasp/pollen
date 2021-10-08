@@ -68,7 +68,9 @@ func (p *Pollen) Publish(topic string, body []byte) error {
 		return ErrConnNotReady
 	}
 
-	if _, err := p.conn.Write(pkg.PubEncode(topic, body)); err != nil {
+	tbody := append([]byte{byte(len(topic))}, []byte(topic)...)
+	tbody = append(tbody, body...)
+	if _, err := p.conn.Write(pkg.FIXED_PUBLISH.Encode(tbody)); err != nil {
 		return err
 	}
 	return nil
