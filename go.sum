@@ -51,6 +51,8 @@ github.com/gowasp/pkg v0.0.0-20211008070732-631182a9170e h1:QhqYDTq8n/Vwi85kSmwQ
 github.com/gowasp/pkg v0.0.0-20211008070732-631182a9170e/go.mod h1:XsmyVL8SJG2XYpz7h8ivS+bhazNSNRC5cOrYD+OLGlo=
 github.com/gowasp/pkg v0.0.0-20211008082935-623ced496bfc h1:+J8FtLHe8PPrWt38Ips1NpNhzfPvJcGa+2aYCB8JKEY=
 github.com/gowasp/pkg v0.0.0-20211008082935-623ced496bfc/go.mod h1:XsmyVL8SJG2XYpz7h8ivS+bhazNSNRC5cOrYD+OLGlo=
+github.com/gowasp/pkg v0.0.0-20211008101422-c68c11a35309 h1:p36WluoxOYf5b0TVlBgsz3DABOhMBr8B4OekY+jyb4I=
+github.com/gowasp/pkg v0.0.0-20211008101422-c68c11a35309/go.mod h1:XsmyVL8SJG2XYpz7h8ivS+bhazNSNRC5cOrYD+OLGlo=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
