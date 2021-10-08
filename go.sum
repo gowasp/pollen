@@ -11,6 +11,8 @@ github.com/gowasp/corepb v0.0.0-20210812131913-fea064a20e14 h1:GaG01oBRNSpZr2Grp
 github.com/gowasp/corepb v0.0.0-20210812131913-fea064a20e14/go.mod h1:AKF///Mg++s2lxcjWDfVor8eYuHm8bRkC+x+Po0R5j8=
 github.com/gowasp/corepb v0.0.0-20211005114503-8b3173423383 h1:nP0CbTcTBkDo6jPkPPjn5S/5h2QZ+eADCBYY/FzEkVI=
 github.com/gowasp/corepb v0.0.0-20211005114503-8b3173423383/go.mod h1:AKF///Mg++s2lxcjWDfVor8eYuHm8bRkC+x+Po0R5j8=
+github.com/gowasp/corepb v0.0.0-20211008102058-211eb6034bd1 h1:bOTyLQ6LZinhjxCRTUoGLQu+SW4reOQgVxGdKCqJ3nI=
+github.com/gowasp/corepb v0.0.0-20211008102058-211eb6034bd1/go.mod h1:AKF///Mg++s2lxcjWDfVor8eYuHm8bRkC+x+Po0R5j8=
 github.com/gowasp/pkg v0.0.0-20210813120125-aeb189beb449 h1:8y02lj313VFe+HeI8leSMcSFGvt05EDO2FSyHM8TYcs=
 github.com/gowasp/pkg v0.0.0-20210813120125-aeb189beb449/go.mod h1:fA7okL9O1DnPE+kNoQ5iE748LepdzivU29cx2GL4sDg=
 github.com/gowasp/pkg v0.0.0-20210814093932-9b87da86d2c2 h1:M07nVMrKJ13CUfY7cIRzEDGz3HUHbinEi6VU4mkxVl4=

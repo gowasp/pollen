@@ -238,8 +238,8 @@ func (p *Pollen) ping() {
 }
 
 func (p *Pollen) pubHandle(varintLen int, buf *bytes.Buffer) {
-	tl := buf.Bytes()[2+varintLen]
-	topic := string(buf.Bytes()[3+varintLen : 3+varintLen+int(tl)])
+	tl := buf.Bytes()[1+varintLen]
+	topic := string(buf.Bytes()[2+varintLen : 2+varintLen+int(tl)])
 	if v := p.subscribe.Get(topic); v != nil {
 		v(buf.Bytes())
 	}
