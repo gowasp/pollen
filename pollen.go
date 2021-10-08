@@ -3,7 +3,6 @@ package pollen
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"errors"
 	"net"
 	"sync"
@@ -146,97 +145,54 @@ func (p *Pollen) connect(conn *net.TCPConn) error {
 
 func (p *Pollen) handle(conn *net.TCPConn) {
 	reader := bufio.NewReader(conn)
-	buf := new(bytes.Buffer)
 	var (
-		offset      int
-		varintLen   int
-		topicLen    int
-		size        int
-		code        byte
-		topicBytes  = make([]byte, 0)
-		varintBytes = make([]byte, 0)
+		offset,
+		varintLen,
+		size int
+		code byte
 	)
+
+	buf := &bytes.Buffer{}
+	buf.Reset()
 	for {
-		// set timeout.
 		conn.SetReadDeadline(time.Now().Add(p.opt.ReadTimeout))
-		for {
-			b, err := reader.ReadByte()
-			if err != nil {
-				conn.Close()
-				zap.L().Error(err.Error())
-				return
-			}
+		b, err := reader.ReadByte()
+		if err != nil {
+			conn.Close()
+			zap.L().Error(err.Error())
+			return
+		}
 
-			if code == 0 {
-				code = b
-				if pkg.Fixed(code) == pkg.FIXED_PONG {
-					offset, varintLen, size, code = 0, 0, 0, 0
-					buf.Reset()
-					break
-				}
-				continue
-			}
-
-			if pkg.Fixed(code) == pkg.FIXED_PUBLISH {
-				if topicLen == 0 {
-					topicLen = int(b)
-					continue
-				}
-				if topicLen != len(topicBytes) {
-					topicBytes = append(topicBytes, b)
-					continue
-				}
-
-				if varintLen == 0 {
-					varintLen = int(b)
-					continue
-				}
-
-				varintBytes = append(varintBytes, b)
-				offset++
-
-				if offset == varintLen {
-					px, pn := proto.DecodeVarint(varintBytes)
-					size = int(px) + pn
-				}
-				buf.WriteByte(b)
-				if offset == size && size != 0 {
-					buf.Next(varintLen)
-					p.pubHandle(string(topicBytes), buf)
-					offset, varintLen, size, code, topicLen = 0, 0, 0, 0, 0
-					buf.Reset()
-					topicBytes = make([]byte, 0)
-					varintBytes = make([]byte, 0)
-					break
-				}
-				continue
-			}
-
-			if varintLen == 0 {
-				varintLen = int(b)
-				continue
-			}
-
-			buf.WriteByte(b)
-			offset++
-
-			if offset == varintLen {
-				px, pn := proto.DecodeVarint(buf.Next(offset))
-				size = int(px) + pn
-			}
-
-			if offset == size && size != 0 {
-				p.typeHandle(pkg.Fixed(code), conn, buf)
-
-				buf.Reset()
+		buf.WriteByte(b)
+		offset++
+		if code == 0 {
+			code = b
+			if pkg.Fixed(code) == pkg.FIXED_PONG {
 				offset, varintLen, size, code = 0, 0, 0, 0
-				break
+				buf.Reset()
 			}
+			continue
+		}
+		if varintLen == 0 {
+			px, pn := pkg.DecodeVarint(buf.Bytes()[1:])
+			size = int(px) + pn
+			if size == 0 {
+				continue
+			}
+			varintLen = pn
+			continue
+		}
+
+		if offset == size+1 && size != 0 {
+			p.typeHandle(pkg.Fixed(code), conn, varintLen, buf)
+			buf.Reset()
+			offset, varintLen, size, code = 0, 0, 0, 0
+			continue
 		}
 	}
 }
 
-func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, buf *bytes.Buffer) error {
+func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, varintLen int, buf *bytes.Buffer) {
 	switch t {
 	case pkg.FIXED_CONNACK:
 		p.rwmutex.Lock()
@@ -248,21 +204,20 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, buf *bytes.Buffer) e
 		go p.submitSubscribe()
 		if callback.Callback.ConnAck != nil {
 			pb := &corepb.ConnAck{}
-			if err := proto.Unmarshal(buf.Bytes(), pb); err != nil {
+			if err := proto.Unmarshal(buf.Bytes()[1+varintLen:], pb); err != nil {
 				zap.L().Error(err.Error())
-				return errors.New("error data")
 			}
 
 			callback.Callback.ConnAck(conn.LocalAddr().String(), conn.RemoteAddr().String(), pb)
 		}
-		return nil
 	case pkg.FIXED_PONG:
 		if callback.Callback.Pong != nil {
 			callback.Callback.Pong(conn.RemoteAddr().String())
 		}
-		return nil
+	case pkg.FIXED_PUBLISH:
+		p.pubHandle(varintLen, buf)
 	default:
-		return errors.New("error data")
+		zap.L().Error("error data")
 	}
 
 }
@@ -282,28 +237,10 @@ func (p *Pollen) ping() {
 	}
 }
 
-func (p *Pollen) pubHandle(topic string, buf *bytes.Buffer) error {
+func (p *Pollen) pubHandle(varintLen int, buf *bytes.Buffer) {
+	tl := buf.Bytes()[2+varintLen]
+	topic := string(buf.Bytes()[3+varintLen : 3+varintLen+int(tl)])
 	if v := p.subscribe.Get(topic); v != nil {
 		v(buf.Bytes())
 	}
-	return nil
-}
-
-func (p *Pollen) pubAckHandle(body []byte) {
-
-	if callback.Callback.PubAck != nil {
-		x, _ := pkg.DecodeVarint(body)
-		callback.Callback.PubAck(x)
-	}
-
-}
-
-type ctxString string
-
-const (
-	_CTXSEQ ctxString = "ctxSeq"
-)
-
-func GetCtxSeq(ctx context.Context) int {
-	return ctx.Value(_CTXSEQ).(int)
 }
