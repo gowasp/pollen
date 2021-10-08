@@ -1,7 +1,6 @@
 package pollen
 
 import (
-	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -18,22 +17,21 @@ func TestPollen_Subscribe(t *testing.T) {
 	zap.ReplaceGlobals(l)
 
 	p := New()
-	p.Subscribe("a/b", func(c context.Context, b []byte) error {
+	p.Subscribe("a/b", func(b []byte) error {
 		zap.L().Debug(string(b))
 		return nil
 	})
-	p.Subscribe("c/d", func(c context.Context, b []byte) error {
+	p.Subscribe("c/d", func(b []byte) error {
 		zap.L().Debug(string(b))
 		return nil
 	})
-	p.Subscribe("e/f", func(c context.Context, b []byte) error {
+	p.Subscribe("e/f", func(b []byte) error {
 		zap.L().Debug(string(b))
 		return nil
 	})
 
 	callback.Callback.ConnAck = func(s1, s2 string, ca *corepb.ConnAck) {
 		zap.S().Debug(ca.Time)
-		p.SubmitSubscribe()
 
 	}
 
