@@ -84,7 +84,7 @@ func TestPollen_Publish(t *testing.T) {
 	if err := p.Publish("a/b", []byte("pollen1")); err != nil {
 		zap.L().Error(err.Error())
 	}
-	p.Publish("c/d", nil)
-	p.Publish("e/f", nil)
+	p.Publish("c/d", []byte{1, 2})
+	p.Publish("e/f", []byte{3, 4})
 	select {}
 }
