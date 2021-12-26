@@ -76,6 +76,9 @@ func (p *Pollen) Publish(topic string, body []byte) error {
 }
 
 func (p *Pollen) submitSubscribe() error {
+	if p.subscribe == nil {
+		return nil
+	}
 	strs := p.subscribe.GetTopics()
 	if len(strs) == 0 {
 		return nil
