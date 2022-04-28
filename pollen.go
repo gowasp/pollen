@@ -13,7 +13,7 @@ import (
 	"github.com/gowasp/corepb"
 	"github.com/gowasp/pkg"
 	"github.com/gowasp/pollen/callback"
-	"go.uber.org/zap"
+	"github.com/tnngo/lad"
 )
 
 type Option struct {
@@ -108,7 +108,7 @@ func (p *Pollen) Dial(addr string) {
 	var retryTime = 1 * time.Second
 	for {
 		if conn, err := net.DialTimeout("tcp", addr, 5*time.Second); err != nil {
-			zap.L().Error(err.Error())
+			lad.L().Error(err.Error())
 		} else {
 			if err := p.connect(conn.(*net.TCPConn)); err != nil {
 				goto NEXT
@@ -136,11 +136,11 @@ func (p *Pollen) connect(conn *net.TCPConn) error {
 
 	b, err := proto.Marshal(pb)
 	if err != nil {
-		zap.L().Error(err.Error())
+		lad.L().Error(err.Error())
 		return err
 	}
 	if _, err := conn.Write(pkg.FIXED_CONNECT.Encode(b)); err != nil {
-		zap.L().Error(err.Error())
+		lad.L().Error(err.Error())
 		return err
 	}
 	return nil
@@ -162,7 +162,7 @@ func (p *Pollen) handle(conn *net.TCPConn) {
 		b, err := reader.ReadByte()
 		if err != nil {
 			conn.Close()
-			zap.L().Error(err.Error())
+			lad.L().Error(err.Error())
 			return
 		}
 
@@ -208,7 +208,7 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, varintLen int, buf *
 		if callback.Callback.ConnAck != nil {
 			pb := &corepb.ConnAck{}
 			if err := proto.Unmarshal(buf.Bytes()[1+varintLen:], pb); err != nil {
-				zap.L().Error(err.Error())
+				lad.L().Error(err.Error())
 			}
 
 			callback.Callback.ConnAck(conn.LocalAddr().String(), conn.RemoteAddr().String(), pb)
@@ -220,7 +220,7 @@ func (p *Pollen) typeHandle(t pkg.Fixed, conn *net.TCPConn, varintLen int, buf *
 	case pkg.FIXED_PUBLISH:
 		p.pubHandle(varintLen, buf)
 	default:
-		zap.L().Error("error data")
+		lad.L().Error("error data")
 	}
 
 }
@@ -232,7 +232,7 @@ func (p *Pollen) ping() {
 
 	for {
 		if _, err := p.conn.Write([]byte{byte(pkg.FIXED_PING)}); err != nil {
-			zap.L().Warn(err.Error())
+			lad.L().Warn(err.Error())
 			p.conn.Close()
 			return
 		}

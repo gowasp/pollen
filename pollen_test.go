@@ -9,29 +9,29 @@ import (
 
 	"github.com/gowasp/corepb"
 	"github.com/gowasp/pollen/callback"
-	"go.uber.org/zap"
+	"github.com/tnngo/lad"
 )
 
 func TestPollen_Subscribe(t *testing.T) {
-	l, _ := zap.NewDevelopment()
-	zap.ReplaceGlobals(l)
+	l, _ := lad.NewDevelopment()
+	lad.ReplaceGlobals(l)
 
 	p := New()
 	p.Subscribe("a/b", func(b []byte) error {
-		zap.L().Debug(string(b))
+		lad.L().Debug(string(b))
 		return nil
 	})
 	p.Subscribe("c/d", func(b []byte) error {
-		zap.L().Debug(string(b))
+		lad.L().Debug(string(b))
 		return nil
 	})
 	p.Subscribe("e/f", func(b []byte) error {
-		zap.L().Debug(string(b))
+		lad.L().Debug(string(b))
 		return nil
 	})
 
 	callback.Callback.ConnAck = func(s1, s2 string, ca *corepb.ConnAck) {
-		zap.S().Debug(ca.Time)
+		lad.S().Debug(ca.Time)
 
 	}
 
@@ -55,8 +55,8 @@ func TestPollen_Subscribe(t *testing.T) {
 }
 
 func TestPollen_Publish(t *testing.T) {
-	l, _ := zap.NewDevelopment()
-	zap.ReplaceGlobals(l)
+	l, _ := lad.NewDevelopment()
+	lad.ReplaceGlobals(l)
 
 	p := New()
 	p.opt.Username = "123"
@@ -76,13 +76,13 @@ func TestPollen_Publish(t *testing.T) {
 	p.opt.Password = b64
 
 	callback.Callback.ConnAck = func(s1, s2 string, ca *corepb.ConnAck) {
-		zap.S().Debug(ca.Time)
+		lad.S().Debug(ca.Time)
 	}
 	go p.Dial("localhost:6000")
 	time.Sleep(2 * time.Second)
 
 	if err := p.Publish("a/b", []byte("pollen1")); err != nil {
-		zap.L().Error(err.Error())
+		lad.L().Error(err.Error())
 	}
 	p.Publish("c/d", []byte{1, 2})
 	p.Publish("e/f", []byte{3, 4})
