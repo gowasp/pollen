@@ -13,7 +13,7 @@ import (
 	"github.com/gowasp/corepb"
 	"github.com/gowasp/pkg"
 	"github.com/gowasp/pollen/callback"
-	"github.com/tnngo/lad"
+	"github.com/ovixonlabs/lad"
 )
 
 type Option struct {
