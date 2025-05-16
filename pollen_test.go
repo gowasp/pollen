@@ -10,7 +10,7 @@ import (
 
 	"github.com/gowasp/corepb"
 	"github.com/gowasp/pollen/callback"
-	"github.com/ovixonlabs/lad"
+	"github.com/omivix/lad"
 )
 
 func TestPollen_Subscribe(t *testing.T) {
